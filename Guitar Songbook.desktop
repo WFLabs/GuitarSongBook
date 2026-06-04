@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Guitar Songbook
+Comment=Start the Guitar Songbook web app
+Exec=konsole --noclose -e bash -c "/home/iker/Documents/Claude\\ Projects/Home\\ Projects\\ Wiki/wiki/projects/GuitarSongBook/start.sh; exec bash"
+Icon=audio-x-generic
+Terminal=false
+Categories=Music;

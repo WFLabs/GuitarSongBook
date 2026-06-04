@@ -1,0 +1,21 @@
+# Python
+venv/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Database (your library — not committed)
+backend/songs.db
+
+# Media (your audio files — not committed)
+media/*
+!media/.gitkeep
+
+# Frontend
+frontend/node_modules/
+
+# OS
+.DS_Store
+
+# Claude Code
+.claude/
