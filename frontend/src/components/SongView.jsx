@@ -1,24 +1,59 @@
 import React, { useState, useEffect } from 'react'
 import PracticeTracker from './PracticeTracker'
 import YoutubePanel from './YoutubePanel'
-import LyricsView from './LyricsView'
+import LyricsView, { transposeLyrics } from './LyricsView'
+import { CHORD_DB } from './ChordDiagram'
+import ChordDiagramSVG from './ChordDiagram'
+import Metronome from './Metronome'
 
-export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, instrument, setInstrument }) {
-  const [song, setSong] = useState(null)
-  const [tab, setTab] = useState('tabs')
+function extractChords(lyrics, transpose) {
+  if (!lyrics) return []
+  const text = transpose ? transposeLyrics(lyrics, transpose) : lyrics
+  const seen = new Set()
+  for (const m of text.matchAll(/\[([^\]]+)\]/g)) {
+    const name = m[1]
+    if (CHORD_DB[name]) seen.add(name)
+  }
+  return [...seen]
+}
+
+const BackIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 18l-6-6 6-6"/>
+  </svg>
+)
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M7 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 7 5.5Z"/>
+  </svg>
+)
+const YTIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M22 7.5a3 3 0 0 0-2.1-2.1C18 5 12 5 12 5s-6 0-7.9.4A3 3 0 0 0 2 7.5 31 31 0 0 0 1.7 12 31 31 0 0 0 2 16.5a3 3 0 0 0 2.1 2.1C6 19 12 19 12 19s6 0 7.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22.3 12 31 31 0 0 0 22 7.5ZM10 15V9l5.2 3Z"/>
+  </svg>
+)
+const PDFIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/>
+    <path d="M14 3v5h5"/>
+  </svg>
+)
+
+export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onBack }) {
+  const [song, setSong]     = useState(null)
+  const [tab, setTab]       = useState('lyrics')
   const [showYT, setShowYT] = useState(false)
-  const [showPractice, setShowPractice] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [transpose, setTranspose] = useState(0)
-  const [twoCol, setTwoCol] = useState(false)
+  const [twoCol, setTwoCol] = useState(true)
 
-  const load = () =>
-    fetch(`/songs/${songId}`).then(r => r.json()).then(setSong)
-
+  const load = () => fetch(`/songs/${songId}`).then(r => r.json()).then(setSong)
   useEffect(() => { load() }, [songId])
-  useEffect(() => { setTranspose(0) }, [songId])
+  useEffect(() => { setTranspose(0); setTab('lyrics') }, [songId])
 
-  if (!song) return <p style={{ color: 'var(--text2)' }}>Loading…</p>
+  if (!song) return (
+    <div className="song-main" style={{ color: 'var(--text-3)', fontFamily: 'var(--f-mono)' }}>Loading…</div>
+  )
 
   const deleteSong = async () => {
     if (!confirm(`Delete "${song.title}"?`)) return
@@ -34,122 +69,126 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, ins
     a.click()
   }
 
+  const transposeVal = transpose > 0 ? `+${transpose}` : String(transpose)
+  const chords = extractChords(song.lyrics, transpose)
+
   return (
-    <div style={{ maxWidth: twoCol ? 'none' : 900, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-        <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700 }}>{song.title}</h2>
-          {song.artist && <div style={{ color: 'var(--text2)', marginTop: 2 }}>{song.artist}</div>}
-          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-            {song.genre && <Tag>{song.genre}</Tag>}
-            {song.key && <Tag accent>Key of {song.key}</Tag>}
-            {song.tuning && song.tuning !== 'Standard' && <Tag>Tuning: {song.tuning}</Tag>}
-            {song.capo > 0 && <Tag>Capo {song.capo}</Tag>}
-            {song.tempo > 0 && <Tag>{song.tempo} BPM</Tag>}
+    <>
+      {/* Song main */}
+      <div className="song-main">
+        <button className="backlink" onClick={onBack}>
+          <BackIcon /> Library
+        </button>
+
+        <div className="song-head">
+          <div>
+            <h1 className="song-title">{song.title}</h1>
+            {song.artist && <div className="song-artist">{song.artist}</div>}
+            <div className="song-meta">
+              {song.genre && <span className="chip">{song.genre}</span>}
+              {song.key && <span className="chip key">Key of {song.key}</span>}
+              {song.tuning && song.tuning !== 'Standard' && <span className="chip mono">{song.tuning}</span>}
+              {song.capo > 0 && <span className="chip">Capo {song.capo}</span>}
+              {song.tempo > 0 && <span className="chip mono">{song.tempo} bpm</span>}
+            </div>
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {song.media_file && (
-            <button className="btn-secondary btn-sm" onClick={() => setPlayerSong(song)}>▶ Play</button>
-          )}
-          <button
-            className={song.media_file ? 'btn-ghost btn-sm' : 'btn-secondary btn-sm'}
-            onClick={() => setShowYT(v => !v)}>
-            {showYT ? 'Hide YouTube' : (song.media_file ? '🔍 YouTube' : '+ Add Audio')}
-          </button>
-          <button className="btn-ghost btn-sm" onClick={exportPdf}>⬇ PDF</button>
-          <button className="btn-ghost btn-sm" onClick={onEdit}>Edit</button>
-          <button className="btn-danger btn-sm" onClick={deleteSong} disabled={deleting}>Delete</button>
-        </div>
-      </div>
-
-      {showYT && <YoutubePanel song={song} onDownloaded={load} />}
-
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 12 }}>
-        {[['tabs','Tabs'],['lyrics','Lyrics'],['notes','Notes'],['practice','Practice']].map(([id, label]) => (
-          <button key={id} onClick={() => { setTab(id); if (id === 'practice') setShowPractice(true) }} style={{
-            background: tab === id ? 'var(--surface2)' : 'transparent',
-            color: tab === id ? 'var(--text)' : 'var(--text2)',
-            borderRadius: '6px 6px 0 0',
-            padding: '7px 18px',
-            fontWeight: tab === id ? 600 : 400,
-            borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
-          }}>
-            {label}{id === 'practice' && song.practice_count > 0 ? ` (${song.practice_count})` : ''}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'tabs' && (
-        song.tabs ? (
-          <pre style={{
-            fontFamily: 'var(--mono)',
-            fontSize: 13,
-            lineHeight: 1.6,
-            background: 'var(--surface)',
-            padding: '16px',
-            borderRadius: 'var(--radius)',
-            overflow: 'auto',
-            whiteSpace: 'pre',
-          }}>{song.tabs}</pre>
-        ) : <Empty>No tabs added yet. Click Edit to add tabs.</Empty>
-      )}
-      {tab === 'lyrics' && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--text2)' }}>Transpose</span>
-            <button className="btn-ghost btn-sm" onClick={() => setTranspose(t => t - 1)}>−</button>
-            <span style={{
-              fontSize: 13, fontWeight: 600, minWidth: 32, textAlign: 'center',
-              color: transpose !== 0 ? 'var(--accent)' : 'var(--text2)',
-            }}>
-              {transpose > 0 ? `+${transpose}` : transpose}
-            </span>
-            <button className="btn-ghost btn-sm" onClick={() => setTranspose(t => t + 1)}>+</button>
-            {transpose !== 0 && (
-              <button className="btn-ghost btn-sm" onClick={() => setTranspose(0)}>Reset</button>
+          <div className="song-acts">
+            {song.media_file && (
+              <button className="btn primary" onClick={() => setPlayerSong(song)}>
+                <PlayIcon /> Play
+              </button>
             )}
-            <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 4px' }} />
-            <button
-              className="btn-ghost btn-sm"
-              onClick={() => setTwoCol(v => !v)}
-              style={{ color: twoCol ? 'var(--accent)' : undefined, fontWeight: twoCol ? 600 : undefined }}
-            >
-              {twoCol ? '1 col' : '2 col'}
+            <button className="btn" onClick={() => setShowYT(v => !v)}>
+              <YTIcon /> YouTube
             </button>
+            <button className="btn" onClick={exportPdf}>
+              <PDFIcon /> PDF
+            </button>
+            <button className="btn ghost" onClick={onEdit}>Edit</button>
+            <button className="btn ghost danger" onClick={deleteSong} disabled={deleting}>Delete</button>
           </div>
-          {song.lyrics ? <LyricsView lyrics={song.lyrics} transpose={transpose} twoCol={twoCol} instrument={instrument} setInstrument={setInstrument} /> : <Empty>No lyrics added yet.</Empty>}
-        </>
-      )}
-      {tab === 'notes' && (
-        song.notes ? (
-          <div style={{
-            background: 'var(--surface)',
-            borderRadius: 'var(--radius)',
-            padding: '16px',
-            lineHeight: 1.7,
-            whiteSpace: 'pre-wrap',
-          }}>{song.notes}</div>
-        ) : <Empty>No notes added yet.</Empty>
-      )}
-      {tab === 'practice' && (
-        <PracticeTracker songId={song.id} />
-      )}
-    </div>
+        </div>
+
+        {showYT && (
+          <div style={{ marginTop: 20 }}>
+            <YoutubePanel song={song} onDownloaded={load} />
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="tabs">
+          {[['tabs','Tabs'],['lyrics','Lyrics'],['notes','Notes'],['practice','Practice']].map(([id, label]) => (
+            <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
+              {label}{id === 'practice' && song.practice_count > 0 ? ` (${song.practice_count})` : ''}
+            </button>
+          ))}
+        </div>
+
+        {/* Song toolbar — only for lyrics tab */}
+        {tab === 'lyrics' && (
+          <div className="song-toolbar">
+            <div className="tool-group">
+              <span className="tiny">Transpose</span>
+              <div className="stepper">
+                <button onClick={() => setTranspose(t => Math.max(-11, t - 1))}>−</button>
+                <span className="val">{transposeVal}</span>
+                <button onClick={() => setTranspose(t => Math.min(11, t + 1))}>+</button>
+              </div>
+            </div>
+            <div className="tool-group">
+              <div className="segmented">
+                <button className={!twoCol ? 'on' : ''} onClick={() => setTwoCol(false)}>1 col</button>
+                <button className={twoCol ? 'on' : ''} onClick={() => setTwoCol(true)}>2 col</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Content panels */}
+        {tab === 'tabs' && (
+          song.tabs
+            ? <pre className="tabs-content">{song.tabs}</pre>
+            : <EmptyMsg>No tabs added yet. Click Edit to add tabs.</EmptyMsg>
+        )}
+        {tab === 'lyrics' && (
+          song.lyrics
+            ? <LyricsView lyrics={song.lyrics} transpose={transpose} twoCol={twoCol} />
+            : <EmptyMsg>No lyrics added yet.</EmptyMsg>
+        )}
+        {tab === 'notes' && (
+          song.notes
+            ? <div className="notes-content">{song.notes}</div>
+            : <EmptyMsg>No notes added yet.</EmptyMsg>
+        )}
+        {tab === 'practice' && <PracticeTracker songId={song.id} />}
+      </div>
+
+      {/* Song rail */}
+      <aside className="song-rail">
+        {chords.length > 0 && (
+          <div className="panel">
+            <div className="sec-label">Chords used</div>
+            <div className="chordgrid">
+              {chords.map(name => (
+                <div className="chord" key={name}>
+                  <span className="cname">{name}</span>
+                  <ChordDiagramSVG name={name} {...CHORD_DB[name]} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="panel">
+          <div className="sec-label">Metronome</div>
+          <div className="metro">
+            <Metronome defaultTempo={song.tempo} />
+          </div>
+        </div>
+      </aside>
+    </>
   )
 }
 
-function Tag({ children, accent }) {
-  return (
-    <span style={{
-      background: accent ? 'var(--accent)' : 'var(--surface2)',
-      color: accent ? '#fff' : 'var(--text2)',
-      borderRadius: 4, padding: '2px 7px', fontSize: 11,
-      fontWeight: accent ? 600 : 400,
-    }}>{children}</span>
-  )
-}
-
-function Empty({ children }) {
-  return <p style={{ color: 'var(--text2)', fontStyle: 'italic', padding: '20px 0' }}>{children}</p>
+function EmptyMsg({ children }) {
+  return <p style={{ color: 'var(--text-3)', fontStyle: 'italic', padding: '20px 0', fontFamily: 'var(--f-ui)' }}>{children}</p>
 }

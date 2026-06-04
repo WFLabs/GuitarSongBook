@@ -191,70 +191,49 @@ export const UKU_CHORD_DB = {
   'Bm7':    { frets: [2, 2, 2, 2], baseFret: 2 },
 }
 
-const S = 12   // string spacing
-const F = 14   // fret spacing
-const L = 20   // left margin (for fret numbers)
-const T = 30   // top margin (chord name + X/O row)
-const DR = 4.5 // dot radius
-const FRETS = 4
-
-export default function ChordDiagram({ name, frets, baseFret = 1, strings = 6, compact = false }) {
-  const N = strings
-  const scale = compact ? 0.82 : 1
-  const s = S * scale
-  const f = F * scale
-  const l = L * scale
-  const t = T * scale
-  const dr = DR * scale
-  const w = l + (N - 1) * s + 10 * scale
-  const h = t + FRETS * f + 8 * scale
-
-  const sx = i => l + i * s
-  const fy = fr => t + (fr - 0.5) * f
-
-  const relFrets = frets.map(fr => fr > 0 ? fr - baseFret + 1 : fr)
+// New design: theme-aware SVG chord diagram (used in song rail)
+export default function ChordDiagramSVG({ name, frets, baseFret = 1, strings = 6 }) {
+  const W = 64, padL = 9, padR = 9
+  const top = 22, gw = W - padL - padR
+  const fH = 14, numFrets = 4, gh = fH * numFrets
+  const sx = i => padL + i * (gw / (strings - 1))
+  const showNut = baseFret === 1
 
   return (
-    <svg width={w} height={h} style={{ display: 'block' }}>
-      <text x={w / 2} y={compact ? 11 : 13} textAnchor="middle" fill="#eaeaea"
-        fontSize={compact ? 9 : 11} fontWeight="700" fontFamily="sans-serif">
-        {name}
-      </text>
+    <svg viewBox={`0 0 ${W} ${top + gh + 8}`} aria-label={`${name} chord`} style={{ width: '100%', height: 'auto' }}>
+      {/* Nut or position label */}
+      {showNut
+        ? <rect x={padL} y={top} width={gw} height={3} rx={1} fill="currentColor" opacity={0.85} />
+        : <text x={padL - 3} y={top + fH * 0.65} textAnchor="end" fontSize={9} fill="currentColor" opacity={0.6} fontFamily="monospace">{baseFret}fr</text>
+      }
 
+      {/* Fret lines */}
+      {Array.from({ length: numFrets + 1 }, (_, f) => (
+        <line key={`f${f}`} x1={padL} y1={top + f * fH} x2={padL + gw} y2={top + f * fH}
+          stroke="currentColor" strokeWidth={1} opacity={0.22} />
+      ))}
+
+      {/* String lines */}
+      {Array.from({ length: strings }, (_, i) => (
+        <line key={`s${i}`} x1={sx(i)} y1={top} x2={sx(i)} y2={top + gh}
+          stroke="currentColor" strokeWidth={1} opacity={0.22} />
+      ))}
+
+      {/* Markers */}
       {frets.map((fr, i) => {
+        const x = sx(i)
         if (fr === -1) return (
-          <text key={i} x={sx(i)} y={t - 5 * scale} textAnchor="middle" fill="#e94560"
-            fontSize={compact ? 8 : 10} fontFamily="sans-serif">✕</text>
+          <g key={`m${i}`}>
+            <line x1={x - 3} y1={top - 12} x2={x + 3} y2={top - 6} stroke="currentColor" strokeWidth={1.4} opacity={0.5} strokeLinecap="round" />
+            <line x1={x + 3} y1={top - 12} x2={x - 3} y2={top - 6} stroke="currentColor" strokeWidth={1.4} opacity={0.5} strokeLinecap="round" />
+          </g>
         )
         if (fr === 0) return (
-          <text key={i} x={sx(i)} y={t - 5 * scale} textAnchor="middle" fill="#8aa"
-            fontSize={compact ? 9 : 11} fontFamily="sans-serif">○</text>
+          <circle key={`o${i}`} cx={x} cy={top - 9} r={3.1} fill="none" stroke="currentColor" strokeWidth={1.4} opacity={0.5} />
         )
-        return null
-      })}
-
-      <rect x={l} y={t} width={(N - 1) * s} height={baseFret === 1 ? 3 * scale : scale}
-        fill={baseFret === 1 ? '#ccc' : '#444'} rx="1" />
-
-      {baseFret > 1 && (
-        <text x={l - 4 * scale} y={t + f / 2 + 4 * scale} textAnchor="end" fill="#888"
-          fontSize={compact ? 7 : 9} fontFamily="sans-serif">
-          {baseFret}fr
-        </text>
-      )}
-
-      {Array.from({ length: N }).map((_, i) => (
-        <line key={i} x1={sx(i)} y1={t} x2={sx(i)} y2={t + FRETS * f} stroke="#444" strokeWidth="1" />
-      ))}
-
-      {Array.from({ length: FRETS }).map((_, i) => (
-        <line key={i} x1={l} y1={t + (i + 1) * f} x2={l + (N - 1) * s} y2={t + (i + 1) * f}
-          stroke="#444" strokeWidth="1" />
-      ))}
-
-      {relFrets.map((rf, i) => {
-        if (rf < 1 || rf > FRETS) return null
-        return <circle key={i} cx={sx(i)} cy={fy(rf)} r={dr} fill="#e94560" />
+        const displayRow = fr - baseFret + 1
+        const y = top + (displayRow - 0.5) * fH
+        return <circle key={`d${i}`} cx={x} cy={y} r={4.2} fill="var(--coral)" />
       })}
     </svg>
   )

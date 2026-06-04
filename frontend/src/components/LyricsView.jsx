@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react'
-import ChordDiagram, { CHORD_DB, UKU_CHORD_DB } from './ChordDiagram'
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
 const NOTE_INDEX = {
@@ -47,29 +46,36 @@ export function transposeLyrics(lyrics, semitones) {
   return lyrics.replace(/\[([^\]]+)\]/g, (_, c) => `[${transposeChord(c, semitones)}]`)
 }
 
-// Parse [Chord] inline markers.
-// Each segment: { chord: string|null, text: string }
-// The chord floats above the text that immediately follows it.
+const SECTION_WORDS = ['verse', 'chorus', 'bridge', 'intro', 'outro', 'pre-chorus', 'prechoruse', 'interlude', 'hook', 'tag', 'coda', 'solo', 'refrain', 'break']
+
+function isSectionHeader(name) {
+  const lower = name.toLowerCase()
+  return SECTION_WORDS.some(s => lower.startsWith(s))
+}
+
+// Parse [Chord] inline markers into lines + section headers.
 function parseLyrics(text) {
-  const chords = new Set()
   const lines = []
 
   for (const raw of text.split('\n')) {
     const matches = [...raw.matchAll(/\[([^\]]+)\]/g)]
+
     if (matches.length === 0) {
       lines.push({ type: 'plain', text: raw })
       continue
     }
 
-    matches.forEach(m => chords.add(m[1]))
+    // Whole line is a single bracket expression → section header
+    if (matches.length === 1 && raw.trim() === matches[0][0] && isSectionHeader(matches[0][1])) {
+      lines.push({ type: 'section', name: matches[0][1] })
+      continue
+    }
 
+    // chord-lyric line
     const segments = []
-
-    // Text before the first chord marker
     const pre = raw.slice(0, matches[0].index)
     if (pre) segments.push({ chord: null, text: pre })
 
-    // Each chord paired with the text up to the next chord (or end of line)
     for (let i = 0; i < matches.length; i++) {
       const m = matches[i]
       const start = m.index + m[0].length
@@ -81,120 +87,65 @@ function parseLyrics(text) {
     lines.push({ type: 'chord-lyric', segments })
   }
 
-  return { chords, lines }
+  return lines
 }
 
-export default function LyricsView({ lyrics, transpose = 0, twoCol = false, instrument = 'guitar', setInstrument }) {
+export default function LyricsView({ lyrics, transpose = 0, twoCol = false }) {
   const effective = useMemo(() => transposeLyrics(lyrics || '', transpose), [lyrics, transpose])
-  const { chords, lines } = useMemo(() => parseLyrics(effective), [effective])
-  const [chordsOpen, setChordsOpen] = React.useState(true)
+  const lines = useMemo(() => parseLyrics(effective), [effective])
 
-  const db = instrument === 'ukulele' ? UKU_CHORD_DB : CHORD_DB
-  const strings = instrument === 'ukulele' ? 4 : 6
-  const knownChords = [...chords].filter(c => db[c])
-  const unknownChords = [...chords].filter(c => !db[c])
+  // Group lines into sections for rendering
+  const sections = useMemo(() => {
+    const result = []
+    let current = { name: null, lines: [] }
+
+    for (const line of lines) {
+      if (line.type === 'section') {
+        if (current.lines.length > 0 || current.name) result.push(current)
+        current = { name: line.name, lines: [] }
+      } else {
+        current.lines.push(line)
+      }
+    }
+    if (current.lines.length > 0 || current.name) result.push(current)
+    return result
+  }, [lines])
 
   return (
-    <div>
-      {/* Chord diagram strip */}
-      {(knownChords.length > 0 || unknownChords.length > 0) && (
-        <div style={{
-          background: 'var(--surface)',
-          borderRadius: 'var(--radius)',
-          padding: '10px 20px',
-          marginBottom: '16px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: chordsOpen ? 12 : 0 }}>
-            <button
-              onClick={() => setChordsOpen(v => !v)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                background: 'none', border: 'none', cursor: 'pointer',
-                padding: '4px 0', color: 'var(--text2)', fontSize: 12, fontWeight: 600,
-              }}
-            >
-              <span style={{ fontSize: 10 }}>{chordsOpen ? '▾' : '▸'}</span>
-              Chords
-            </button>
-            {setInstrument && (
-              <button
-                onClick={() => setInstrument(v => v === 'guitar' ? 'ukulele' : 'guitar')}
-                style={{
-                  background: instrument === 'ukulele' ? 'var(--accent)' : 'none',
-                  border: '1px solid var(--text2)', borderRadius: 4,
-                  cursor: 'pointer', padding: '2px 8px',
-                  color: instrument === 'ukulele' ? '#fff' : 'var(--text2)',
-                  fontSize: 11, fontWeight: 600,
-                }}
-              >
-                {instrument === 'guitar' ? 'Guitar' : 'Ukulele'}
-              </button>
-            )}
-          </div>
-          {chordsOpen && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
-              {knownChords.map(name => {
-                const def = db[name]
-                return (
-                  <ChordDiagram key={name} name={name} frets={def.frets} baseFret={def.baseFret} strings={strings} />
-                )
-              })}
-              {unknownChords.length > 0 && (
-                <div style={{ fontSize: 11, color: 'var(--text2)', alignSelf: 'center' }}>
-                  No diagram: {unknownChords.join(', ')}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+    <div className={`lyrics${twoCol ? ' col2' : ''}`}>
+      {sections.map((sec, si) => (
+        <div className="section" key={si}>
+          {sec.name && <div className="section-name">{sec.name}</div>}
+          {sec.lines.map((line, li) => {
+            if (line.type === 'plain') {
+              return (
+                <div key={li} className="lyrics-plain">{line.text || ' '}</div>
+              )
+            }
 
-      {/* Lyrics with inline chords */}
-      <div style={{
-        background: 'var(--surface)',
-        borderRadius: 'var(--radius)',
-        padding: '18px 22px',
-        fontFamily: 'var(--mono)',
-        fontSize: 14,
-        columnWidth: twoCol ? '480px' : undefined,
-        columnGap: twoCol ? '32px' : undefined,
-      }}>
-        {lines.map((line, i) => {
-          if (line.type === 'plain') {
+            // Build chord row and word row from segments
+            let chordRow = ''
+            let wordRow = ''
+            for (const seg of line.segments) {
+              const chord = seg.chord || ''
+              const word = seg.text || ''
+              const len = Math.max(chord.length + 1, word.length)
+              chordRow += chord.padEnd(len)
+              wordRow += word.padEnd(len)
+            }
+
+            const hasChords = line.segments.some(s => s.chord)
+            const hasWords = wordRow.trim().length > 0
+
             return (
-              <div key={i} style={{ lineHeight: '1.8em', minHeight: '1.8em', breakInside: 'avoid' }}>
-                {line.text || ' '}
+              <div key={li} className="lyric-line">
+                {hasChords && <div className="chord-row">{chordRow}</div>}
+                {hasWords && <div className="word-row">{wordRow.trimEnd()}</div>}
               </div>
             )
-          }
-
-          return (
-            <div key={i} style={{ display: 'flex', flexWrap: 'wrap', marginBottom: 4, breakInside: 'avoid' }}>
-              {line.segments.map((seg, j) => (
-                <span key={j} style={{
-                  display: 'inline-flex',
-                  flexDirection: 'column',
-                  whiteSpace: 'pre',
-                }}>
-                  <span style={{
-                    color: seg.chord ? '#f5a623' : 'transparent',
-                    fontWeight: 700,
-                    fontSize: 12,
-                    lineHeight: '1.5em',
-                    fontFamily: 'sans-serif',
-                    userSelect: 'none',
-                  }}>
-                    {seg.chord || ' '}
-                  </span>
-                  <span style={{ color: 'var(--text)', lineHeight: '1.7em' }}>
-                    {seg.text}
-                  </span>
-                </span>
-              ))}
-            </div>
-          )
-        })}
-      </div>
+          })}
+        </div>
+      ))}
     </div>
   )
 }

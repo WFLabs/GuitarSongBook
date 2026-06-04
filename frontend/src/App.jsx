@@ -1,38 +1,52 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import SongLibrary from './components/SongLibrary'
 import SongEditor from './components/SongEditor'
 import SongView from './components/SongView'
 import Player from './components/Player'
 import RightPane from './components/RightPane'
+import SetlistView from './components/SetlistView'
 import ChromaticTuner from './components/ChromaticTuner'
-import ChordChartPanel from './components/ChordChartPanel'
 
-const VIEWS = { library: 'library', edit: 'edit', view: 'view' }
+const GUITAR_SVG = (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.5 3.3c-.7-.7-1.9-.6-2.8.3l-3.1 3.1c-.5.5-.8 1.2-.8 1.9v.6l-5.7 5.7a3.2 3.2 0 1 0 1.5 1.5l5.7-5.7h.6c.7 0 1.4-.3 1.9-.8l3.1-3.1c.9-.9 1-2.1.3-2.8Zm-12 15.4a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Z"/>
+  </svg>
+)
+
+function getStoredTheme() {
+  try { return localStorage.getItem('gsb-theme') || 'dark' } catch { return 'dark' }
+}
 
 export default function App() {
-  const [view, setView] = useState(VIEWS.library)
+  const [view, setView] = useState('library')
   const [selectedSong, setSelectedSong] = useState(null)
   const [editSong, setEditSong] = useState(null)
   const [playerSong, setPlayerSong] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [pendingYtUrl, setPendingYtUrl] = useState(null)
-
-  // Playlist coordination — activePlaylistId is owned here so SongCards can reach it
   const [activePlaylistId, setActivePlaylistId] = useState(null)
   const [playlistRefreshKey, setPlaylistRefreshKey] = useState(0)
   const [tunerOpen, setTunerOpen] = useState(false)
-  const [instrument, setInstrument] = useState('guitar')
+  const [theme, setTheme] = useState(getStoredTheme)
+  const [songCount, setSongCount] = useState(0)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    try { localStorage.setItem('gsb-theme', theme) } catch {}
+  }, [theme])
+
+  useEffect(() => {
+    fetch('/songs/?').then(r => r.json()).then(d => setSongCount(Array.isArray(d) ? d.length : 0)).catch(() => {})
+  }, [refreshKey])
 
   const refresh = () => setRefreshKey(k => k + 1)
 
-  const openView = (song) => { setSelectedSong(song); setView(VIEWS.view) }
-  const openEdit = (song) => { setEditSong(song); setPendingYtUrl(null); setView(VIEWS.edit) }
-  const openNew  = () => { setEditSong(null); setPendingYtUrl(null); setView(VIEWS.edit) }
+  const openView = (song) => { setSelectedSong(song); setView('song') }
+  const openEdit = (song) => { setEditSong(song); setPendingYtUrl(null); setView('edit') }
+  const openNew  = () => { setEditSong(null); setPendingYtUrl(null); setView('edit') }
 
   const openPrefilled = (prefill, ytUrl) => {
-    setEditSong(prefill)
-    setPendingYtUrl(ytUrl || null)
-    setView(VIEWS.edit)
+    setEditSong(prefill); setPendingYtUrl(ytUrl || null); setView('edit')
   }
 
   const onSaved = (song) => {
@@ -46,14 +60,10 @@ export default function App() {
       })
       setPendingYtUrl(null)
     }
-    setView(VIEWS.view)
+    setView('song')
   }
 
-  const onDeleted = () => {
-    refresh()
-    setSelectedSong(null)
-    setView(VIEWS.library)
-  }
+  const onDeleted = () => { refresh(); setSelectedSong(null); setView('library') }
 
   const addSongToPlaylist = async (songId) => {
     if (!activePlaylistId) return
@@ -65,79 +75,133 @@ export default function App() {
     setPlaylistRefreshKey(k => k + 1)
   }
 
-  const songTempo = selectedSong?.tempo ?? 0
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <Header setView={setView} openNew={openNew} onTuner={() => setTunerOpen(true)} />
+      <Header
+        view={view}
+        setView={setView}
+        openNew={openNew}
+        onTuner={() => setTunerOpen(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        songCount={songCount}
+      />
+
       {tunerOpen && <ChromaticTuner onClose={() => setTunerOpen(false)} />}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <ChordChartPanel instrument={instrument} setInstrument={setInstrument} />
-        <main style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
-          {view === VIEWS.library && (
-            <SongLibrary
-              key={refreshKey}
-              onSelect={openView}
-              onEdit={openEdit}
-              onNew={openNew}
-              onPrefillNew={openPrefilled}
-              setPlayerSong={setPlayerSong}
-              onAddToPlaylist={activePlaylistId ? addSongToPlaylist : null}
-            />
-          )}
-          {view === VIEWS.edit && (
+
+      <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+        {view === 'library' && (
+          <div className="lib-wrap view-fade">
+            <div className="lib-main">
+              <SongLibrary
+                key={refreshKey}
+                onSelect={openView}
+                onEdit={openEdit}
+                onNew={openNew}
+                onPrefillNew={openPrefilled}
+                setPlayerSong={setPlayerSong}
+                onAddToPlaylist={activePlaylistId ? addSongToPlaylist : null}
+              />
+            </div>
+            <aside className="rail">
+              <RightPane
+                songTempo={selectedSong?.tempo ?? 0}
+                onSelectSong={openView}
+                setPlayerSong={setPlayerSong}
+                onActivePlaylistChange={setActivePlaylistId}
+                playlistRefreshKey={playlistRefreshKey}
+                onAddSong={addSongToPlaylist}
+                onRunSetlist={() => setView('setlist')}
+              />
+            </aside>
+          </div>
+        )}
+
+        {view === 'edit' && (
+          <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 24px 80px' }} className="view-fade">
             <SongEditor
               song={editSong}
               pendingDownload={!!pendingYtUrl}
               onSaved={onSaved}
-              onCancel={() => setView(selectedSong ? VIEWS.view : VIEWS.library)}
+              onCancel={() => setView(selectedSong ? 'song' : 'library')}
             />
-          )}
-          {view === VIEWS.view && selectedSong && (
+          </div>
+        )}
+
+        {view === 'song' && selectedSong && (
+          <div className="song-wrap view-fade">
             <SongView
               songId={selectedSong.id}
               onEdit={() => openEdit(selectedSong)}
               onDeleted={onDeleted}
               setPlayerSong={setPlayerSong}
-              instrument={instrument}
-              setInstrument={setInstrument}
+              onBack={() => setView('library')}
             />
-          )}
-        </main>
-        <RightPane
-          songTempo={songTempo}
-          onSelectSong={openView}
-          setPlayerSong={setPlayerSong}
-          onActivePlaylistChange={setActivePlaylistId}
-          playlistRefreshKey={playlistRefreshKey}
-          onAddSong={addSongToPlaylist}
-        />
+          </div>
+        )}
+
+        {view === 'setlist' && (
+          <div className="view-fade">
+            <SetlistView
+              playlistId={activePlaylistId}
+              onBack={() => setView('library')}
+            />
+          </div>
+        )}
       </div>
+
       <Player song={playerSong} onClose={() => setPlayerSong(null)} />
     </div>
   )
 }
 
-function Header({ setView, openNew, onTuner }) {
+function Header({ view, setView, openNew, onTuner, theme, onToggleTheme, songCount }) {
   const openTerminal = () => fetch('/launch-terminal', { method: 'POST' })
+
+  const SunIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="4.5"/>
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+    </svg>
+  )
+  const MoonIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.6 6.6 0 0 0 21 12.8Z"/>
+    </svg>
+  )
+
   return (
-    <header style={{
-      background: 'var(--surface)',
-      borderBottom: '1px solid var(--border)',
-      padding: '10px 16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      flexShrink: 0,
-    }}>
-      <span style={{ fontSize: 22, marginRight: 4 }}>🎸</span>
-      <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)', marginRight: 'auto' }}>
-        Guitar Song Book
-      </h1>
-      <button className="btn-ghost btn-sm" onClick={() => setView('library')}>Library</button>
-      <button className="btn-ghost btn-sm" onClick={onTuner}>Tuner</button>
-      <button className="btn-ghost btn-sm" onClick={openTerminal} title="Open terminal in project folder">🖥️ Terminal</button>
-      <button className="btn-primary btn-sm" onClick={openNew}>+ New Song</button>
+    <header className="topbar">
+      <div className="brand">
+        <span className="logo">{GUITAR_SVG}</span>
+        <div>
+          <b>Guitar Songbook</b>
+          <span className="tag">{songCount} songs</span>
+        </div>
+      </div>
+
+      <nav className="topnav">
+        <a className={view === 'library' || view === 'song' || view === 'edit' ? 'active' : ''}
+          onClick={() => setView('library')}>Library</a>
+        <a className={view === 'setlist' ? 'active' : ''} onClick={() => setView('setlist')}>Setlist</a>
+        <a onClick={onTuner}>Tuner</a>
+        <a onClick={openTerminal}>Terminal</a>
+      </nav>
+
+      <div className="spacer" />
+
+      <button className="iconbtn" onClick={onToggleTheme} title="Toggle theme">
+        {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+      </button>
+
+      <button className="btn primary" onClick={openNew}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        New Song
+      </button>
     </header>
   )
 }
