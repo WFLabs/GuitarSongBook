@@ -53,7 +53,6 @@ function isSectionHeader(name) {
   return SECTION_WORDS.some(s => lower.startsWith(s))
 }
 
-// Parse [Chord] inline markers into lines + section headers.
 function parseLyrics(text) {
   const lines = []
 
@@ -65,13 +64,11 @@ function parseLyrics(text) {
       continue
     }
 
-    // Whole line is a single bracket expression → section header
     if (matches.length === 1 && raw.trim() === matches[0][0] && isSectionHeader(matches[0][1])) {
       lines.push({ type: 'section', name: matches[0][1] })
       continue
     }
 
-    // chord-lyric line
     const segments = []
     const pre = raw.slice(0, matches[0].index)
     if (pre) segments.push({ chord: null, text: pre })
@@ -90,15 +87,46 @@ function parseLyrics(text) {
   return lines
 }
 
+function SectionBlock({ sec }) {
+  return (
+    <div className="section">
+      {sec.name && <div className="section-name">{sec.name}</div>}
+      {sec.lines.map((line, li) => {
+        if (line.type === 'plain') {
+          return <div key={li} className="lyrics-plain">{line.text || ' '}</div>
+        }
+
+        let chordRow = ''
+        let wordRow = ''
+        for (const seg of line.segments) {
+          const chord = seg.chord || ''
+          const word = seg.text || ''
+          const len = Math.max(chord.length + 1, word.length)
+          chordRow += chord.padEnd(len)
+          wordRow += word.padEnd(len)
+        }
+
+        const hasChords = line.segments.some(s => s.chord)
+        const hasWords = wordRow.trim().length > 0
+
+        return (
+          <div key={li} className="lyric-line">
+            {hasChords && <div className="chord-row">{chordRow}</div>}
+            {hasWords && <div className="word-row">{wordRow.trimEnd()}</div>}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function LyricsView({ lyrics, transpose = 0, twoCol = false }) {
   const effective = useMemo(() => transposeLyrics(lyrics || '', transpose), [lyrics, transpose])
   const lines = useMemo(() => parseLyrics(effective), [effective])
 
-  // Group lines into sections for rendering
   const sections = useMemo(() => {
     const result = []
     let current = { name: null, lines: [] }
-
     for (const line of lines) {
       if (line.type === 'section') {
         if (current.lines.length > 0 || current.name) result.push(current)
@@ -111,41 +139,23 @@ export default function LyricsView({ lyrics, transpose = 0, twoCol = false }) {
     return result
   }, [lines])
 
-  return (
-    <div className={`lyrics${twoCol ? ' col2' : ''}`}>
-      {sections.map((sec, si) => (
-        <div className="section" key={si}>
-          {sec.name && <div className="section-name">{sec.name}</div>}
-          {sec.lines.map((line, li) => {
-            if (line.type === 'plain') {
-              return (
-                <div key={li} className="lyrics-plain">{line.text || ' '}</div>
-              )
-            }
-
-            // Build chord row and word row from segments
-            let chordRow = ''
-            let wordRow = ''
-            for (const seg of line.segments) {
-              const chord = seg.chord || ''
-              const word = seg.text || ''
-              const len = Math.max(chord.length + 1, word.length)
-              chordRow += chord.padEnd(len)
-              wordRow += word.padEnd(len)
-            }
-
-            const hasChords = line.segments.some(s => s.chord)
-            const hasWords = wordRow.trim().length > 0
-
-            return (
-              <div key={li} className="lyric-line">
-                {hasChords && <div className="chord-row">{chordRow}</div>}
-                {hasWords && <div className="word-row">{wordRow.trimEnd()}</div>}
-              </div>
-            )
-          })}
+  if (twoCol && sections.length > 0) {
+    const mid = Math.ceil(sections.length / 2)
+    return (
+      <div className="lyrics two-col">
+        <div className="lyrics-col">
+          {sections.slice(0, mid).map((sec, i) => <SectionBlock key={i} sec={sec} />)}
         </div>
-      ))}
+        <div className="lyrics-col">
+          {sections.slice(mid).map((sec, i) => <SectionBlock key={i} sec={sec} />)}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="lyrics">
+      {sections.map((sec, i) => <SectionBlock key={i} sec={sec} />)}
     </div>
   )
 }

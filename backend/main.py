@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,10 +48,16 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 @app.post("/launch-terminal")
 def launch_terminal():
-    subprocess.Popen(
+    candidates = [
         ["konsole", "--workdir", PROJECT_DIR],
-        start_new_session=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    return {"ok": True}
+        ["alacritty", "--working-directory", PROJECT_DIR],
+        ["kitty", "--directory", PROJECT_DIR],
+        ["xfce4-terminal", f"--working-directory={PROJECT_DIR}"],
+        ["gnome-terminal", f"--working-directory={PROJECT_DIR}"],
+        ["xterm", "-e", f"cd {PROJECT_DIR!r} && exec $SHELL"],
+    ]
+    for cmd in candidates:
+        if shutil.which(cmd[0]):
+            subprocess.Popen(cmd, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return {"ok": True, "terminal": cmd[0]}
+    return {"ok": False, "error": "No terminal emulator found"}

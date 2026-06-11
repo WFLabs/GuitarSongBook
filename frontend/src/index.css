@@ -263,10 +263,15 @@ label { font-size: 12px; color: var(--text-2); display: block; margin-bottom: 4p
 .fav svg { width: 16px; height: 16px; }
 
 /* list mode */
-.songgrid.list .card { display: flex; align-items: center; gap: 16px; padding: 11px 16px; }
-.songgrid.list .card-top { width: 230px; flex: 0 0 230px; display: block; }
+.songgrid.list .card { display: flex; align-items: center; gap: 14px; padding: 7px 14px; }
+.songgrid.list .card-top { width: 220px; flex: 0 0 220px; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.songgrid.list .card-top > div { min-width: 0; flex: 1; }
+.songgrid.list .card-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.songgrid.list .card-artist { font-size: 12px; margin-top: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.songgrid.list .fav { display: none; }
 .songgrid.list .card-meta { margin-top: 0; flex: 1; }
-.songgrid.list .card-foot { margin: 0; padding: 0; border: 0; gap: 14px; }
+.songgrid.list .card-foot { margin: 0; padding: 0; border: 0; gap: 10px; }
+.songgrid.list .sessions { display: none; }
 
 /* ============================================================
    RIGHT RAIL (library)
@@ -359,9 +364,10 @@ label { font-size: 12px; color: var(--text-2); display: block; margin-bottom: 4p
 
 /* lyrics */
 .lyrics { font-family: var(--f-mono); }
-.lyrics.col2 { column-count: 2; column-gap: 54px; }
-@media (max-width: 760px) { .lyrics.col2 { column-count: 1; } }
-.section { break-inside: avoid; margin-bottom: 26px; }
+.lyrics.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 54px; }
+@media (max-width: 760px) { .lyrics.two-col { grid-template-columns: 1fr; } }
+.lyrics-col { min-width: 0; }
+.section { margin-bottom: 26px; }
 .section-name { font-family: var(--f-display); font-weight: 600; font-size: 14px; color: var(--coral-text); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
 .lyric-line { margin-bottom: 11px; }
 .chord-row { color: var(--chord); font-weight: 700; font-size: 14px; white-space: pre; letter-spacing: .02em; line-height: 1.6; }
@@ -378,6 +384,18 @@ label { font-size: 12px; color: var(--text-2); display: block; margin-bottom: 4p
   background: var(--surface); border-radius: var(--r-lg); padding: 16px;
   line-height: 1.7; white-space: pre-wrap; border: 1px solid var(--line);
 }
+
+/* chord panel (collapsible, above lyrics) */
+.chord-panel { margin: 0 0 22px; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.chord-panel-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 14px; background: var(--surface-2); border: 0; color: var(--text-2);
+  font-family: var(--f-mono); font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .1em; cursor: pointer; transition: .14s var(--ease);
+}
+.chord-panel-toggle:hover { color: var(--text); background: var(--surface-3); }
+.chord-panel-count { color: var(--text-3); }
+.chord-panel-grid { padding: 16px; background: var(--surface); display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 14px 10px; }
 
 /* song right rail */
 .song-rail {

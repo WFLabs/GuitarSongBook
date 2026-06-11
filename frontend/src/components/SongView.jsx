@@ -38,14 +38,21 @@ const PDFIcon = () => (
     <path d="M14 3v5h5"/>
   </svg>
 )
+const ChevronIcon = ({ open }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    style={{ width: 14, height: 14, transform: open ? 'rotate(180deg)' : 'none', transition: '.2s' }}>
+    <path d="M6 9l6 6 6-6"/>
+  </svg>
+)
 
 export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onBack }) {
-  const [song, setSong]     = useState(null)
-  const [tab, setTab]       = useState('lyrics')
-  const [showYT, setShowYT] = useState(false)
+  const [song, setSong]         = useState(null)
+  const [tab, setTab]           = useState('lyrics')
+  const [showYT, setShowYT]     = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [transpose, setTranspose] = useState(0)
-  const [twoCol, setTwoCol] = useState(true)
+  const [twoCol, setTwoCol]     = useState(true)
+  const [chordsOpen, setChordsOpen] = useState(true)
 
   const load = () => fetch(`/songs/${songId}`).then(r => r.json()).then(setSong)
   useEffect(() => { load() }, [songId])
@@ -144,6 +151,26 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
           </div>
         )}
 
+        {/* Chord panel — collapsible, above lyrics */}
+        {tab === 'lyrics' && chords.length > 0 && (
+          <div className="chord-panel">
+            <button className="chord-panel-toggle" onClick={() => setChordsOpen(v => !v)}>
+              <span>Chords <span className="chord-panel-count">({chords.length})</span></span>
+              <ChevronIcon open={chordsOpen} />
+            </button>
+            {chordsOpen && (
+              <div className="chordgrid chord-panel-grid">
+                {chords.map(name => (
+                  <div className="chord" key={name}>
+                    <span className="cname">{name}</span>
+                    <ChordDiagramSVG name={name} {...CHORD_DB[name]} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Content panels */}
         {tab === 'tabs' && (
           song.tabs
@@ -163,21 +190,8 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
         {tab === 'practice' && <PracticeTracker songId={song.id} />}
       </div>
 
-      {/* Song rail */}
+      {/* Song rail — metronome only */}
       <aside className="song-rail">
-        {chords.length > 0 && (
-          <div className="panel">
-            <div className="sec-label">Chords used</div>
-            <div className="chordgrid">
-              {chords.map(name => (
-                <div className="chord" key={name}>
-                  <span className="cname">{name}</span>
-                  <ChordDiagramSVG name={name} {...CHORD_DB[name]} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         <div className="panel">
           <div className="sec-label">Metronome</div>
           <div className="metro">
