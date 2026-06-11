@@ -26,6 +26,9 @@ export default function Player({ song, onClose }) {
     setSpeed(1)
     if (song && audioRef.current) {
       audioRef.current.load()
+      audioRef.current.play()
+        .then(() => setPlaying(true))
+        .catch(() => {})
     }
   }, [song?.id])
 

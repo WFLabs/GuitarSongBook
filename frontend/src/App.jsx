@@ -42,11 +42,7 @@ export default function App() {
 
   const refresh = () => setRefreshKey(k => k + 1)
 
-  const openView = (song) => {
-    setSelectedSong(song)
-    setView('song')
-    if (song.media_file) setPlayerSong(song)
-  }
+  const openView = (song) => { setSelectedSong(song); setView('song') }
   const openEdit = (song) => { setEditSong(song); setPendingYtUrl(null); setView('edit') }
   const openNew  = () => { setEditSong(null); setPendingYtUrl(null); setView('edit') }
 
