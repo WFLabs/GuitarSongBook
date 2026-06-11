@@ -29,6 +29,7 @@ export default function App() {
   const [tunerOpen, setTunerOpen] = useState(false)
   const [theme, setTheme] = useState(getStoredTheme)
   const [songCount, setSongCount] = useState(0)
+  const [gridMode, setGridMode] = useState('grid')
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -41,7 +42,11 @@ export default function App() {
 
   const refresh = () => setRefreshKey(k => k + 1)
 
-  const openView = (song) => { setSelectedSong(song); setView('song') }
+  const openView = (song) => {
+    setSelectedSong(song)
+    setView('song')
+    if (song.media_file) setPlayerSong(song)
+  }
   const openEdit = (song) => { setEditSong(song); setPendingYtUrl(null); setView('edit') }
   const openNew  = () => { setEditSong(null); setPendingYtUrl(null); setView('edit') }
 
@@ -103,6 +108,8 @@ export default function App() {
                 onPrefillNew={openPrefilled}
                 setPlayerSong={setPlayerSong}
                 onAddToPlaylist={activePlaylistId ? addSongToPlaylist : null}
+                gridMode={gridMode}
+                setGridMode={setGridMode}
               />
             </div>
             <aside className="rail">

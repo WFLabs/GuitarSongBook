@@ -59,14 +59,13 @@ const HeartFilledIcon = () => (
   </svg>
 )
 
-export default function SongLibrary({ onSelect, onEdit, onNew, onPrefillNew, setPlayerSong, onAddToPlaylist }) {
+export default function SongLibrary({ onSelect, onEdit, onNew, onPrefillNew, setPlayerSong, onAddToPlaylist, gridMode, setGridMode }) {
   const [songs, setSongs]     = useState([])
   const [genres, setGenres]   = useState([])
   const [keys, setKeys]       = useState([])
   const [artists, setArtists] = useState([])
   const [filter, setFilter]   = useState({ genre: '', key: '', artist: '', search: '' })
   const [loading, setLoading] = useState(true)
-  const [gridMode, setGridMode] = useState('grid')
 
   const [onlineOpen, setOnlineOpen]  = useState(false)
   const [tabResults, setTabResults]  = useState([])
