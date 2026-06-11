@@ -159,7 +159,7 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
               <ChevronIcon open={chordsOpen} />
             </button>
             {chordsOpen && (
-              <div className="chordgrid chord-panel-grid">
+              <div className="chord-panel-grid">
                 {chords.map(name => (
                   <div className="chord" key={name}>
                     <span className="cname">{name}</span>
