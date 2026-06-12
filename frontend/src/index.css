@@ -392,7 +392,7 @@ label { font-size: 12px; color: var(--text-2); display: block; margin-bottom: 4p
 .chord-panel-toggle:hover { color: var(--text); background: var(--surface-3); }
 .chord-panel-count { color: var(--text-3); }
 .chord-panel-grid { padding: 16px; background: var(--surface); display: grid; grid-template-columns: repeat(auto-fill, 80px); gap: 14px 10px; }
-.chord-panel-grid.piano { grid-template-columns: repeat(auto-fill, 80px); gap: 14px 16px; }
+.chord-panel-grid.piano { grid-template-columns: repeat(auto-fill, 162px); gap: 14px 16px; }
 
 .chordgrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px 10px; }
 .chord { display: flex; flex-direction: column; align-items: center; gap: 6px; }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import PracticeTracker from './PracticeTracker'
 import YoutubePanel from './YoutubePanel'
 import LyricsView, { transposeLyrics } from './LyricsView'
-import { CHORD_DB } from './ChordDiagram'
+import { CHORD_DB, UKU_CHORD_DB } from './ChordDiagram'
 import ChordDiagramSVG from './ChordDiagram'
 import PianoChordDiagram from './PianoChordDiagram'
 
@@ -12,7 +12,7 @@ function extractChords(lyrics, transpose) {
   const seen = new Set()
   for (const m of text.matchAll(/\[([^\]]+)\]/g)) {
     const name = m[1]
-    if (CHORD_DB[name]) seen.add(name)
+    if (CHORD_DB[name] || UKU_CHORD_DB[name]) seen.add(name)
   }
   return [...seen]
 }
@@ -158,6 +158,7 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div className="segmented" onClick={e => e.stopPropagation()} style={{ padding: '2px', gap: '2px' }}>
                   <button className={chordDisplay === 'guitar' ? 'on' : ''} onClick={() => setChordDisplay('guitar')}>Guitar</button>
+                  <button className={chordDisplay === 'ukulele' ? 'on' : ''} onClick={() => setChordDisplay('ukulele')}>Ukulele</button>
                   <button className={chordDisplay === 'piano' ? 'on' : ''} onClick={() => setChordDisplay('piano')}>Piano</button>
                 </div>
                 <ChevronIcon open={chordsOpen} />
@@ -168,10 +169,9 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
                 {chords.map(name => (
                   <div className="chord" key={name}>
                     <span className="cname">{name}</span>
-                    {chordDisplay === 'guitar'
-                      ? <ChordDiagramSVG name={name} {...CHORD_DB[name]} />
-                      : <PianoChordDiagram name={name} />
-                    }
+                    {chordDisplay === 'guitar' && CHORD_DB[name] && <ChordDiagramSVG name={name} {...CHORD_DB[name]} />}
+                    {chordDisplay === 'ukulele' && UKU_CHORD_DB[name] && <ChordDiagramSVG name={name} {...UKU_CHORD_DB[name]} strings={4} />}
+                    {chordDisplay === 'piano' && <PianoChordDiagram name={name} />}
                   </div>
                 ))}
               </div>
