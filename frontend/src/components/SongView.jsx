@@ -4,6 +4,7 @@ import YoutubePanel from './YoutubePanel'
 import LyricsView, { transposeLyrics } from './LyricsView'
 import { CHORD_DB } from './ChordDiagram'
 import ChordDiagramSVG from './ChordDiagram'
+import PianoChordDiagram from './PianoChordDiagram'
 
 function extractChords(lyrics, transpose) {
   if (!lyrics) return []
@@ -52,6 +53,7 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
   const [transpose, setTranspose] = useState(0)
   const [twoCol, setTwoCol]     = useState(true)
   const [chordsOpen, setChordsOpen] = useState(true)
+  const [chordDisplay, setChordDisplay] = useState('guitar')
 
   const load = () => fetch(`/songs/${songId}`).then(r => r.json()).then(setSong)
   useEffect(() => { load() }, [songId])
@@ -153,14 +155,23 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
           <div className="chord-panel">
             <button className="chord-panel-toggle" onClick={() => setChordsOpen(v => !v)}>
               <span>Chords <span className="chord-panel-count">({chords.length})</span></span>
-              <ChevronIcon open={chordsOpen} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="segmented" onClick={e => e.stopPropagation()} style={{ padding: '2px', gap: '2px' }}>
+                  <button className={chordDisplay === 'guitar' ? 'on' : ''} onClick={() => setChordDisplay('guitar')}>Guitar</button>
+                  <button className={chordDisplay === 'piano' ? 'on' : ''} onClick={() => setChordDisplay('piano')}>Piano</button>
+                </div>
+                <ChevronIcon open={chordsOpen} />
+              </div>
             </button>
             {chordsOpen && (
-              <div className="chord-panel-grid">
+              <div className={`chord-panel-grid${chordDisplay === 'piano' ? ' piano' : ''}`}>
                 {chords.map(name => (
                   <div className="chord" key={name}>
                     <span className="cname">{name}</span>
-                    <ChordDiagramSVG name={name} {...CHORD_DB[name]} />
+                    {chordDisplay === 'guitar'
+                      ? <ChordDiagramSVG name={name} {...CHORD_DB[name]} />
+                      : <PianoChordDiagram name={name} />
+                    }
                   </div>
                 ))}
               </div>
