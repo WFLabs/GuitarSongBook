@@ -45,19 +45,18 @@ const ChevronIcon = ({ open }) => (
   </svg>
 )
 
-export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onBack }) {
+export default function SongView({ songId, transpose, onTransposeChange, onEdit, onDeleted, setPlayerSong, onBack }) {
   const [song, setSong]         = useState(null)
   const [tab, setTab]           = useState('lyrics')
   const [showYT, setShowYT]     = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [transpose, setTranspose] = useState(0)
   const [twoCol, setTwoCol]     = useState(true)
   const [chordsOpen, setChordsOpen] = useState(true)
   const [chordDisplay, setChordDisplay] = useState('guitar')
 
   const load = () => fetch(`/songs/${songId}`).then(r => r.json()).then(setSong)
   useEffect(() => { load() }, [songId])
-  useEffect(() => { setTranspose(0); setTab('lyrics') }, [songId])
+  useEffect(() => { setTab('lyrics') }, [songId])
 
   if (!song) return (
     <div className="song-main" style={{ color: 'var(--text-3)', fontFamily: 'var(--f-mono)' }}>Loading…</div>
@@ -136,9 +135,9 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
             <div className="tool-group">
               <span className="tiny">Transpose</span>
               <div className="stepper">
-                <button onClick={() => setTranspose(t => Math.max(-11, t - 1))}>−</button>
+                <button onClick={() => onTransposeChange(t => Math.max(-11, t - 1))}>−</button>
                 <span className="val">{transposeVal}</span>
-                <button onClick={() => setTranspose(t => Math.min(11, t + 1))}>+</button>
+                <button onClick={() => onTransposeChange(t => Math.min(11, t + 1))}>+</button>
               </div>
             </div>
             <div className="tool-group">

@@ -31,6 +31,12 @@ export default function App() {
   const [theme, setTheme] = useState(getStoredTheme)
   const [songCount, setSongCount] = useState(0)
   const [gridMode, setGridMode] = useState('grid')
+  const [transposeMap, setTransposeMap] = useState({})
+
+  const setSongTranspose = (songId, v) => setTransposeMap(m => ({
+    ...m,
+    [songId]: typeof v === 'function' ? v(m[songId] ?? 0) : v,
+  }))
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -126,6 +132,8 @@ export default function App() {
           {view === 'song' && selectedSong && (
             <SongView
               songId={selectedSong.id}
+              transpose={transposeMap[selectedSong.id] ?? 0}
+              onTransposeChange={(v) => setSongTranspose(selectedSong.id, v)}
               onEdit={() => openEdit(selectedSong)}
               onDeleted={onDeleted}
               setPlayerSong={setPlayerSong}
