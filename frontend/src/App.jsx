@@ -6,6 +6,7 @@ import Player from './components/Player'
 import RightPane from './components/RightPane'
 import SetlistView from './components/SetlistView'
 import ChromaticTuner from './components/ChromaticTuner'
+import Metronome from './components/Metronome'
 
 const GUITAR_SVG = (
   <svg viewBox="0 0 24 24" fill="currentColor">
@@ -92,10 +93,11 @@ export default function App() {
 
       {tunerOpen && <ChromaticTuner onClose={() => setTunerOpen(false)} />}
 
-      <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-        {view === 'library' && (
-          <div className="lib-wrap view-fade">
-            <div className="lib-main">
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        {/* Scrollable main content */}
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+          {view === 'library' && (
+            <div className="lib-main view-fade">
               <SongLibrary
                 key={refreshKey}
                 onSelect={openView}
@@ -108,33 +110,20 @@ export default function App() {
                 setGridMode={setGridMode}
               />
             </div>
-            <aside className="rail">
-              <RightPane
-                songTempo={selectedSong?.tempo ?? 0}
-                onSelectSong={openView}
-                setPlayerSong={setPlayerSong}
-                onActivePlaylistChange={setActivePlaylistId}
-                playlistRefreshKey={playlistRefreshKey}
-                onAddSong={addSongToPlaylist}
-                onRunSetlist={() => setView('setlist')}
+          )}
+
+          {view === 'edit' && (
+            <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 24px 80px' }} className="view-fade">
+              <SongEditor
+                song={editSong}
+                pendingDownload={!!pendingYtUrl}
+                onSaved={onSaved}
+                onCancel={() => setView(selectedSong ? 'song' : 'library')}
               />
-            </aside>
-          </div>
-        )}
+            </div>
+          )}
 
-        {view === 'edit' && (
-          <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 24px 80px' }} className="view-fade">
-            <SongEditor
-              song={editSong}
-              pendingDownload={!!pendingYtUrl}
-              onSaved={onSaved}
-              onCancel={() => setView(selectedSong ? 'song' : 'library')}
-            />
-          </div>
-        )}
-
-        {view === 'song' && selectedSong && (
-          <div className="song-wrap view-fade">
+          {view === 'song' && selectedSong && (
             <SongView
               songId={selectedSong.id}
               onEdit={() => openEdit(selectedSong)}
@@ -142,17 +131,35 @@ export default function App() {
               setPlayerSong={setPlayerSong}
               onBack={() => setView('library')}
             />
-          </div>
-        )}
+          )}
 
-        {view === 'setlist' && (
-          <div className="view-fade">
-            <SetlistView
-              playlistId={activePlaylistId}
-              onBack={() => setView('library')}
-            />
+          {view === 'setlist' && (
+            <div className="view-fade">
+              <SetlistView
+                playlistId={activePlaylistId}
+                onBack={() => setView('library')}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Persistent right rail — single Metronome instance, never unmounts */}
+        <aside className="app-rail">
+          <div className="panel">
+            <div className="sec-label">Metronome</div>
+            <div className="metro">
+              <Metronome defaultTempo={selectedSong?.tempo ?? 0} />
+            </div>
           </div>
-        )}
+          <RightPane
+            onSelectSong={openView}
+            setPlayerSong={setPlayerSong}
+            onActivePlaylistChange={setActivePlaylistId}
+            playlistRefreshKey={playlistRefreshKey}
+            onAddSong={addSongToPlaylist}
+            onRunSetlist={() => setView('setlist')}
+          />
+        </aside>
       </div>
 
       <Player song={playerSong} onClose={() => setPlayerSong(null)} />

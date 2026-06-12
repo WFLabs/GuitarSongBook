@@ -4,7 +4,6 @@ import YoutubePanel from './YoutubePanel'
 import LyricsView, { transposeLyrics } from './LyricsView'
 import { CHORD_DB } from './ChordDiagram'
 import ChordDiagramSVG from './ChordDiagram'
-import Metronome from './Metronome'
 
 function extractChords(lyrics, transpose) {
   if (!lyrics) return []
@@ -80,9 +79,7 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
   const chords = extractChords(song.lyrics, transpose)
 
   return (
-    <>
-      {/* Song main */}
-      <div className="song-main">
+      <div className="song-main view-fade">
         <button className="backlink" onClick={onBack}>
           <BackIcon /> Library
         </button>
@@ -190,16 +187,6 @@ export default function SongView({ songId, onEdit, onDeleted, setPlayerSong, onB
         {tab === 'practice' && <PracticeTracker songId={song.id} />}
       </div>
 
-      {/* Song rail — metronome only */}
-      <aside className="song-rail">
-        <div className="panel">
-          <div className="sec-label">Metronome</div>
-          <div className="metro">
-            <Metronome defaultTempo={song.tempo} />
-          </div>
-        </div>
-      </aside>
-    </>
   )
 }
 
