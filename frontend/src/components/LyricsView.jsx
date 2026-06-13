@@ -88,12 +88,22 @@ function parseLyrics(text) {
 }
 
 function SectionBlock({ sec }) {
+  // Collapse consecutive blank lines to one, trim leading/trailing blanks
+  const isBlank = (l) => l.type === 'plain' && !l.text.trim()
+  const lines = sec.lines
+    .reduce((acc, line) => {
+      if (isBlank(line) && (acc.length === 0 || isBlank(acc[acc.length - 1]))) return acc
+      return [...acc, line]
+    }, [])
+  while (lines.length > 0 && isBlank(lines[lines.length - 1])) lines.pop()
+
   return (
     <div className="section">
       {sec.name && <div className="section-name">{sec.name}</div>}
-      {sec.lines.map((line, li) => {
+      {lines.map((line, li) => {
         if (line.type === 'plain') {
-          return <div key={li} className="lyrics-plain">{line.text || ' '}</div>
+          if (!line.text.trim()) return <div key={li} className="lyric-spacer" />
+          return <div key={li} className="lyrics-plain">{line.text}</div>
         }
 
         let chordRow = ''

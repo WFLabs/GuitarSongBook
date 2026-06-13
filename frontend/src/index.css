@@ -369,6 +369,7 @@ label { font-size: 12px; color: var(--text-2); display: block; margin-bottom: 4p
 .chord-row { color: var(--chord); font-weight: 700; font-size: 14px; white-space: pre; letter-spacing: .02em; line-height: 1.6; }
 .word-row { color: var(--text); font-size: 15px; white-space: pre-wrap; line-height: 1.6; }
 .lyrics-plain { color: var(--text-2); font-size: 14px; white-space: pre-wrap; line-height: 1.8; }
+.lyric-spacer { height: 10px; }
 
 /* tabs/notes content */
 .tabs-content {
