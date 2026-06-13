@@ -41,7 +41,7 @@ export default function SongEditor({ song, pendingDownload, onSaved, onCancel })
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <h2 style={{ fontSize: 20 }}>{isExisting ? 'Edit Song' : 'New Song'}</h2>

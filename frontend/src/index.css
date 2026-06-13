@@ -107,7 +107,7 @@ input, select, textarea {
   font-size: 13px;
 }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--coral); }
-textarea { resize: vertical; font-family: var(--f-mono); }
+textarea { resize: both; font-family: var(--f-mono); }
 label { font-size: 12px; color: var(--text-2); display: block; margin-bottom: 4px; }
 
 /* scrollbars */
