@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guitar Songbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="songbook.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.5 3.3c-.7-.7-1.9-.6-2.8.3l-3.1 3.1c-.5.5-.8 1.2-.8 1.9v.6l-5.7 5.7a3.2 3.2 0 1 0 1.5 1.5l5.7-5.7h.6c.7 0 1.4-.3 1.9-.8l3.1-3.1c.9-.9 1-2.1.3-2.8Zm-12 15.4a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Z"/></svg></span>
+      <div><b>Guitar Songbook</b><span class="tag">142 songs</span></div>
+    </div>
+    <nav class="topnav">
+      <a href="#" class="active" data-route="library">Library</a>
+      <a href="#" data-route="tuner">Tuner</a>
+      <a href="#" data-route="terminal">Terminal</a>
+    </nav>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="themebtn" title="Toggle theme"></button>
+    <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> New Song</button>
+  </header>
+
+  <!-- ============ LIBRARY VIEW ============ -->
+  <section class="view active" id="view-library">
+    <div class="lib-wrap">
+      <div class="lib-main">
+        <div class="toolbar">
+          <label class="search">
+            <span id="nav-search-ic"></span>
+            <input id="searchinput" type="text" placeholder="Search title or artist…">
+          </label>
+          <select class="selectbox"><option>All artists</option></select>
+          <select class="selectbox"><option>All genres</option></select>
+          <select class="selectbox"><option>All keys</option></select>
+        </div>
+        <div class="toolbar-foot">
+          <span class="tiny" id="songcount">142 songs</span>
+          <div class="tool-group">
+            <span class="tiny" style="margin-right:4px">Sort A–Z</span>
+            <div class="viewtoggle" id="viewtoggle">
+              <button class="on" data-view="grid"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg> Grid</button>
+              <button data-view="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg> List</button>
+            </div>
+          </div>
+        </div>
+        <div class="songgrid" id="songgrid"></div>
+      </div>
+      <aside class="rail" id="rail"></aside>
+    </div>
+  </section>
+
+  <!-- ============ SONG (reading) VIEW ============ -->
+  <section class="view" id="view-song">
+    <div class="song-wrap">
+      <div class="song-main">
+        <button class="backlink" id="backlink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Library</button>
+        <div class="song-head">
+          <div>
+            <h1 class="song-title" id="song-title"></h1>
+            <div class="song-artist" id="song-artist"></div>
+            <div class="song-meta" id="song-meta"></div>
+          </div>
+          <div class="song-acts">
+            <button class="btn primary"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 7 5.5Z"/></svg> Play</button>
+            <button class="btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 7.5a3 3 0 0 0-2.1-2.1C18 5 12 5 12 5s-6 0-7.9.4A3 3 0 0 0 2 7.5 31 31 0 0 0 1.7 12 31 31 0 0 0 2 16.5a3 3 0 0 0 2.1 2.1C6 19 12 19 12 19s6 0 7.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22.3 12 31 31 0 0 0 22 7.5ZM10 15V9l5.2 3Z"/></svg> YouTube</button>
+            <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></svg> PDF</button>
+            <button class="btn ghost">Edit</button>
+          </div>
+        </div>
+
+        <div class="tabs" id="song-tabs">
+          <button>Tabs</button>
+          <button class="on">Lyrics</button>
+          <button>Notes</button>
+          <button>Practice</button>
+        </div>
+
+        <div class="song-toolbar">
+          <div class="tool-group">
+            <span class="tiny">Transpose</span>
+            <div class="stepper">
+              <button id="tr-down">−</button>
+              <span class="val" id="tr-val">0</span>
+              <button id="tr-up">+</button>
+            </div>
+          </div>
+          <div class="tool-group">
+            <div class="segmented" id="colseg">
+              <button data-col="1">1 col</button>
+              <button class="on" data-col="2">2 col</button>
+            </div>
+            <button class="btn sm ghost">Auto-scroll</button>
+          </div>
+        </div>
+
+        <div class="lyrics col2" id="lyrics"></div>
+      </div>
+
+      <aside class="song-rail">
+        <div class="panel">
+          <div class="sec-label">Chords used</div>
+          <div class="chordgrid" id="chordgrid"></div>
+          <div class="tiny" style="text-transform:none;letter-spacing:0;color:var(--text-3);font-size:12px">No diagram: Intro, Verse, Chorus, Bridge, Outro</div>
+        </div>
+        <div class="panel">
+          <div class="sec-label">Metronome</div>
+          <div class="metro">
+            <div class="metro-top">
+              <div class="bpm"><b id="song-bpm">91</b><span>bpm</span></div>
+              <button class="startbtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 7 5.5Z"/></svg></button>
+            </div>
+            <div class="slider"><div class="fill" style="width:38%"></div><div class="knob" style="left:38%"></div></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ SETLIST VIEW ============ -->
+  <section class="view" id="view-setlist">
+    <div class="set-wrap">
+      <button class="backlink" id="set-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Library</button>
+      <div class="set-head">
+        <div>
+          <h1 class="set-title" id="set-title"></h1>
+          <div class="set-sub" id="set-sub"></div>
+        </div>
+        <div class="tool-group">
+          <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg> Shuffle</button>
+          <button class="btn primary"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 7 5.5Z"/></svg> Start set</button>
+        </div>
+      </div>
+
+      <div class="now-card">
+        <div class="now-tag">Now · up next</div>
+        <div class="now-row">
+          <div>
+            <div class="now-title" id="now-title"></div>
+            <div class="now-meta" id="now-meta"></div>
+          </div>
+          <div class="now-metro">
+            <div class="bpm"><b>100</b><span>bpm</span></div>
+            <button class="startbtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 7 5.5Z"/></svg></button>
+          </div>
+        </div>
+        <div class="slider" style="margin-top:18px"><div class="fill" style="width:45%"></div><div class="knob" style="left:45%"></div></div>
+      </div>
+
+      <div class="set-list" id="set-list"></div>
+    </div>
+  </section>
+
+  <div class="foot-note">Guitar Songbook · hi-fi mockup</div>
+</div>
+
+<script src="songbook-data.js"></script>
+<script src="songbook.js"></script>
+</body>
+</html>
