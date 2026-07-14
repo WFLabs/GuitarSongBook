@@ -7,6 +7,7 @@ import RightPane from './components/RightPane'
 import SetlistView from './components/SetlistView'
 import ChromaticTuner from './components/ChromaticTuner'
 import Metronome from './components/Metronome'
+import CAGEDView from './components/CAGEDView'
 
 const GUITAR_SVG = (
   <svg viewBox="0 0 24 24" fill="currentColor">
@@ -149,6 +150,12 @@ export default function App() {
               />
             </div>
           )}
+
+          {view === 'caged' && (
+            <div className="view-fade" style={{ padding: '24px 24px 60px', maxWidth: 1100, margin: '0 auto' }}>
+              <CAGEDView />
+            </div>
+          )}
         </div>
 
         {/* Persistent right rail — single Metronome instance, never unmounts */}
@@ -204,6 +211,7 @@ function Header({ view, setView, openNew, onTuner, theme, onToggleTheme, songCou
         <a className={view === 'library' || view === 'song' || view === 'edit' ? 'active' : ''}
           onClick={() => setView('library')}>Library</a>
         <a className={view === 'setlist' ? 'active' : ''} onClick={() => setView('setlist')}>Setlist</a>
+        <a className={view === 'caged' ? 'active' : ''} onClick={() => setView('caged')}>CAGED</a>
         <a onClick={onTuner}>Tuner</a>
         <a onClick={openTerminal}>Terminal</a>
       </nav>
