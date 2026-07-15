@@ -120,7 +120,7 @@ export default function App() {
           )}
 
           {view === 'edit' && (
-            <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 80px' }} className="view-fade">
+            <div style={{ maxWidth: 1500, margin: '0 auto', padding: '24px 24px 80px' }} className="view-fade">
               <SongEditor
                 song={editSong}
                 pendingDownload={!!pendingYtUrl}

@@ -53,7 +53,7 @@ function isSectionHeader(name) {
   return SECTION_WORDS.some(s => lower.startsWith(s))
 }
 
-function parseLyrics(text) {
+export function parseLyrics(text) {
   const lines = []
 
   for (const raw of text.split('\n')) {
@@ -130,34 +130,81 @@ function SectionBlock({ sec }) {
   )
 }
 
+export function buildSections(lines) {
+  const result = []
+  let current = { name: null, lines: [] }
+  for (const line of lines) {
+    if (line.type === 'section') {
+      if (current.lines.length > 0 || current.name) result.push(current)
+      current = { name: line.name, lines: [] }
+    } else {
+      current.lines.push(line)
+    }
+  }
+  if (current.lines.length > 0 || current.name) result.push(current)
+  return result
+}
+
+// Rough render weight of a single parsed line — chord-lyric lines render two
+// rows (chord + word), plain lines render one.
+function lineWeight(line) {
+  if (line.type === 'plain') return line.text.trim() ? 1 : 0.4
+  return line.segments.some(s => s.chord) ? 2 : 1
+}
+
+function sectionWeight(sec) {
+  return 1 + sec.lines.reduce((sum, l) => sum + lineWeight(l), 0) // +1 for header/spacing
+}
+
+// Splits sections across two columns, balancing by rendered weight rather
+// than raw section count so a lopsided verse/chorus split doesn't produce
+// one overflowing column and one near-empty one. When there's only a single
+// section (e.g. no recognized [Verse]/[Chorus] headers at all), splits
+// within that section's own lines instead — otherwise one column would get
+// everything and the other would render empty.
+export function splitIntoColumns(sections) {
+  if (sections.length === 0) return [[], []]
+
+  if (sections.length === 1) {
+    const sec = sections[0]
+    const total = sectionWeight(sec)
+    let acc = 0, splitIdx = sec.lines.length
+    for (let i = 0; i < sec.lines.length; i++) {
+      acc += lineWeight(sec.lines[i])
+      if (acc >= total / 2) { splitIdx = i + 1; break }
+    }
+    if (splitIdx <= 0 || splitIdx >= sec.lines.length) return [[sec], []]
+    return [
+      [{ name: sec.name, lines: sec.lines.slice(0, splitIdx) }],
+      [{ name: null, lines: sec.lines.slice(splitIdx) }],
+    ]
+  }
+
+  const weights = sections.map(sectionWeight)
+  const total = weights.reduce((a, b) => a + b, 0)
+  let acc = 0, cut = sections.length
+  for (let i = 0; i < sections.length; i++) {
+    acc += weights[i]
+    if (acc >= total / 2) { cut = i + 1; break }
+  }
+  cut = Math.max(1, Math.min(cut, sections.length - 1))
+  return [sections.slice(0, cut), sections.slice(cut)]
+}
+
 export default function LyricsView({ lyrics, transpose = 0, twoCol = false }) {
   const effective = useMemo(() => transposeLyrics(lyrics || '', transpose), [lyrics, transpose])
   const lines = useMemo(() => parseLyrics(effective), [effective])
-
-  const sections = useMemo(() => {
-    const result = []
-    let current = { name: null, lines: [] }
-    for (const line of lines) {
-      if (line.type === 'section') {
-        if (current.lines.length > 0 || current.name) result.push(current)
-        current = { name: line.name, lines: [] }
-      } else {
-        current.lines.push(line)
-      }
-    }
-    if (current.lines.length > 0 || current.name) result.push(current)
-    return result
-  }, [lines])
+  const sections = useMemo(() => buildSections(lines), [lines])
 
   if (twoCol && sections.length > 0) {
-    const mid = Math.ceil(sections.length / 2)
+    const [colA, colB] = splitIntoColumns(sections)
     return (
       <div className="lyrics two-col">
         <div className="lyrics-col">
-          {sections.slice(0, mid).map((sec, i) => <SectionBlock key={i} sec={sec} />)}
+          {colA.map((sec, i) => <SectionBlock key={i} sec={sec} />)}
         </div>
         <div className="lyrics-col">
-          {sections.slice(mid).map((sec, i) => <SectionBlock key={i} sec={sec} />)}
+          {colB.map((sec, i) => <SectionBlock key={i} sec={sec} />)}
         </div>
       </div>
     )

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { parseLyrics, buildSections } from './LyricsView'
 
 const KEYS = ['','C','C#','D','D#','E','F','F#','G','G#','A','A#','B',
                'Cm','C#m','Dm','D#m','Em','Fm','F#m','Gm','G#m','Am','A#m','Bm']
@@ -7,10 +8,38 @@ const GENRES = ['','Rock','Pop','Blues','Country','Folk','Jazz','Classical','Met
 
 const empty = { title:'', artist:'', genre:'', key:'', tuning:'Standard', capo:0, tempo:0, lyrics:'', tabs:'', notes:'', youtube_url:'' }
 
+const DEFAULT_TAB_TEMPLATE =
+  'e|--------------------------------------------------|\n' +
+  'B|--------------------------------------------------|\n' +
+  'G|--------------------------------------------------|\n' +
+  'D|--------------------------------------------------|\n' +
+  'A|--------------------------------------------------|\n' +
+  'E|--------------------------------------------------|'
+
+function EditorLegend() {
+  return (
+    <div className="editor-legend">
+      <div className="legend-row">
+        <strong>Chords</strong> — place right before the syllable they apply to: <code>[C]Hello [G]world</code>
+      </div>
+      <div className="legend-row">
+        <strong>Sections</strong> — one bracketed label alone on its own line: <code>[Verse 1]</code>, <code>[Chorus]</code>, <code>[Bridge]</code>, <code>[Intro]</code>, <code>[Outro]</code>, <code>[Pre-Chorus]</code>, <code>[Interlude]</code>, <code>[Hook]</code>, <code>[Tag]</code>, <code>[Coda]</code>, <code>[Solo]</code>, <code>[Refrain]</code>, <code>[Break]</code>
+      </div>
+      <div className="legend-row">
+        <strong>Tabs</strong> — standard 6-line ASCII fretboard, high <code>e</code> to low <code>E</code>, dashes for space, numbers for frets
+      </div>
+      <div className="legend-row">
+        2-column view splits along detected section headers — songs without any will auto-split down the middle instead.
+      </div>
+    </div>
+  )
+}
+
 export default function SongEditor({ song, pendingDownload, onSaved, onCancel }) {
   const [form, setForm] = useState({ ...empty, ...(song || {}) })
   const [saving, setSaving] = useState(false)
   const [artists, setArtists] = useState([])
+  const tabsRef = useRef(null)
 
   useEffect(() => {
     fetch('/songs/meta/artists').then(r => r.json()).then(setArtists)
@@ -21,6 +50,25 @@ export default function SongEditor({ song, pendingDownload, onSaved, onCancel })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const isExisting = !!song?.id
+
+  const sectionCount = useMemo(
+    () => buildSections(parseLyrics(form.lyrics || '')).length,
+    [form.lyrics]
+  )
+
+  const insertTabTemplate = () => {
+    const el = tabsRef.current
+    const current = form.tabs || ''
+    if (!el) { set('tabs', current ? current + '\n\n' + DEFAULT_TAB_TEMPLATE : DEFAULT_TAB_TEMPLATE); return }
+    const start = el.selectionStart ?? current.length
+    const end = el.selectionEnd ?? current.length
+    const needsLeadingBreak = start > 0 && current[start - 1] !== '\n'
+    const insert = (needsLeadingBreak ? '\n\n' : '') + DEFAULT_TAB_TEMPLATE
+    const next = current.slice(0, start) + insert + current.slice(end)
+    set('tabs', next)
+    const cursor = start + insert.length
+    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(cursor, cursor) })
+  }
 
   const save = async () => {
     if (!form.title.trim()) return alert('Title is required')
@@ -41,7 +89,7 @@ export default function SongEditor({ song, pendingDownload, onSaved, onCancel })
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1500, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <h2 style={{ fontSize: 20 }}>{isExisting ? 'Edit Song' : 'New Song'}</h2>
@@ -103,48 +151,67 @@ export default function SongEditor({ song, pendingDownload, onSaved, onCancel })
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 12 }}>
-        {[['tabs','Tabs'],['lyrics','Lyrics'],['notes','Notes']].map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{
-            background: tab === id ? 'var(--surface2)' : 'transparent',
-            color: tab === id ? 'var(--text)' : 'var(--text2)',
-            borderRadius: '6px 6px 0 0',
-            padding: '7px 18px',
-            fontWeight: tab === id ? 600 : 400,
-            borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
-          }}>
-            {label}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 0 }}>
+          {[['tabs','Tabs'],['lyrics','Lyrics'],['notes','Notes']].map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)} style={{
+              background: tab === id ? 'var(--surface2)' : 'transparent',
+              color: tab === id ? 'var(--text)' : 'var(--text2)',
+              borderRadius: '6px 6px 0 0',
+              padding: '7px 18px',
+              fontWeight: tab === id ? 600 : 400,
+              borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
+            }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {tab === 'tabs' && (
+          <button className="btn-ghost btn-sm" onClick={insertTabTemplate} style={{ marginBottom: 6 }}>
+            + Insert neck template
           </button>
-        ))}
+        )}
       </div>
 
       {tab === 'tabs' && (
         <textarea
+          ref={tabsRef}
+          className="editor-textarea"
           value={form.tabs}
           onChange={e => set('tabs', e.target.value)}
-          rows={18}
           placeholder={"e|---|\nB|---|\nG|---|\nD|---|\nA|---|\nE|---|"}
           style={{ fontFamily: 'var(--mono)', fontSize: 13 }}
         />
       )}
       {tab === 'lyrics' && (
-        <textarea
-          value={form.lyrics}
-          onChange={e => set('lyrics', e.target.value)}
-          rows={18}
-          placeholder="Paste or type lyrics here…"
-          style={{ fontFamily: 'inherit', fontSize: 14 }}
-        />
+        <>
+          <textarea
+            className="editor-textarea"
+            value={form.lyrics}
+            onChange={e => set('lyrics', e.target.value)}
+            placeholder="Paste or type lyrics here…"
+            style={{ fontFamily: 'inherit', fontSize: 14 }}
+          />
+          <div className={`editor-hint ${sectionCount <= 1 ? 'warn' : ''}`}>
+            {form.lyrics.trim() === ''
+              ? 'No lyrics yet.'
+              : sectionCount <= 1
+                ? 'No section headers detected — 2-column view will auto-split this song down the middle instead.'
+                : `${sectionCount} section${sectionCount === 1 ? '' : 's'} detected — 2-column view will split along them.`}
+          </div>
+        </>
       )}
       {tab === 'notes' && (
         <textarea
+          className="editor-textarea"
           value={form.notes}
           onChange={e => set('notes', e.target.value)}
-          rows={18}
           placeholder="Chord diagrams, practice notes, tips…"
           style={{ fontFamily: 'inherit', fontSize: 14 }}
         />
       )}
+
+      <EditorLegend />
     </div>
   )
 }
