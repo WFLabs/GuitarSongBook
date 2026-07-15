@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 
 // ─── Music theory ───────────────────────────────────────────
 const NOTE_NAMES = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B']
@@ -113,6 +113,62 @@ function chordLabel({ root, quality }) {
   return noteName(root) + (quality === 'minor' ? 'm' : '')
 }
 
+// Note dots for one chord — pure function so it can be computed per-chord
+// (one call per stacked neck) instead of only for a single "active" chord.
+function computeChordNotes({ root, quality }, { mode, scaleType, activeShape }) {
+  const tones = chordTones(root, quality)
+  const scale = getScaleNotes(root, scaleType)
+  const anchors = cagedAnchors(root)
+  const [rootPc, thirdPc, fifthPc] = tones
+  const roleOf = pc => {
+    if (pc === rootPc)  return 'root'
+    if (pc === thirdPc) return 'third'
+    if (pc === fifthPc) return 'fifth'
+    if (scale.includes(pc)) return 'scale'
+    return null
+  }
+
+  const pcsToShow = mode === 'scale' ? scale : tones
+
+  let windows = null   // null = no restriction (arpeggio)
+  if (mode !== 'arpeggio') {
+    windows = activeShape === 'all'
+      ? SHAPES.map(sh => shapeWindow(sh, anchors))
+      : [shapeWindow(activeShape, anchors)]
+  }
+
+  const seen = new Set()
+  const result = []
+
+  for (let str = 1; str <= 6; str++) {
+    if (activeShape !== 'all' && mode !== 'arpeggio') {
+      if (MUTED[activeShape]?.includes(str)) continue
+    }
+
+    for (const pc of pcsToShow) {
+      for (const fret of fretsForPC(str, pc)) {
+        if (fret > MAX_FRET) continue
+
+        if (windows) {
+          const inWindow = windows.some(([lo, hi]) => fret >= lo && fret <= hi)
+          if (!inWindow) continue
+        }
+
+        const key = `${str}-${fret}`
+        if (seen.has(key)) continue
+        seen.add(key)
+
+        const role = roleOf(pc)
+        if (role) result.push({ str, fret, role, pc })
+      }
+    }
+  }
+  return result
+}
+
+const isPopoutWindow = () =>
+  new URLSearchParams(window.location.search).get('popout') === 'caged'
+
 export default function CAGEDView() {
   const [progression, setProgression] = useState([
     { root: 0, quality: 'major' },
@@ -123,66 +179,18 @@ export default function CAGEDView() {
   const [activeShape, setActiveShape] = useState('all')        // all|E|A|G|D|C
   const [addRoot,     setAddRoot]     = useState(0)
   const [addQuality,  setAddQuality]  = useState('major')
+  const neckRefs = useRef([])
 
-  const chord = progression[Math.min(activeIdx, progression.length - 1)] ?? { root:0, quality:'major' }
-  const { root, quality } = chord
+  // One computed neck (label + note dots + shape anchors) per progression
+  // chord — every chord stays visible as its own stacked fretboard, rather
+  // than only ever showing a single "active" one.
+  const necks = useMemo(() => progression.map(ch => ({
+    chord: ch,
+    anchors: cagedAnchors(ch.root),
+    notes: computeChordNotes(ch, { mode, scaleType, activeShape }),
+  })), [progression, mode, scaleType, activeShape])
 
-  const tones   = useMemo(() => chordTones(root, quality),        [root, quality])
-  const scale   = useMemo(() => getScaleNotes(root, scaleType),   [root, scaleType])
-  const anchors = useMemo(() => cagedAnchors(root),               [root])
-
-  // Build note dots
-  const notes = useMemo(() => {
-    const [rootPc, thirdPc, fifthPc] = tones
-    const roleOf = pc => {
-      if (pc === rootPc)  return 'root'
-      if (pc === thirdPc) return 'third'
-      if (pc === fifthPc) return 'fifth'
-      if (scale.includes(pc)) return 'scale'
-      return null
-    }
-
-    const pcsToShow = mode === 'scale' ? scale : tones
-
-    // Determine which fret windows to restrict to
-    let windows = null   // null = no restriction (arpeggio)
-    if (mode !== 'arpeggio') {
-      if (activeShape === 'all') {
-        windows = SHAPES.map(sh => shapeWindow(sh, anchors))
-      } else {
-        windows = [shapeWindow(activeShape, anchors)]
-      }
-    }
-
-    const seen = new Set()
-    const result = []
-
-    for (let str = 1; str <= 6; str++) {
-      // Skip muted strings when a specific shape is focused
-      if (activeShape !== 'all' && mode !== 'arpeggio') {
-        if (MUTED[activeShape]?.includes(str)) continue
-      }
-
-      for (const pc of pcsToShow) {
-        for (const fret of fretsForPC(str, pc)) {
-          if (fret > MAX_FRET) continue
-
-          if (windows) {
-            const inWindow = windows.some(([lo, hi]) => fret >= lo && fret <= hi)
-            if (!inWindow) continue
-          }
-
-          const key = `${str}-${fret}`
-          if (seen.has(key)) continue
-          seen.add(key)
-
-          const role = roleOf(pc)
-          if (role) result.push({ str, fret, role, pc })
-        }
-      }
-    }
-    return result
-  }, [tones, scale, mode, scaleType, activeShape, anchors])
+  const quality = (progression[Math.min(activeIdx, progression.length - 1)] ?? { quality: 'major' }).quality
 
   const addChord = () => {
     if (progression.length >= 8) return
@@ -198,13 +206,27 @@ export default function CAGEDView() {
     setActiveIdx(Math.min(activeIdx, next.length - 1))
   }
 
+  const focusChord = (i) => {
+    setActiveIdx(i)
+    neckRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  const popOut = () => {
+    window.open(window.location.pathname + '?popout=caged', 'caged-popout', 'width=1180,height=900')
+  }
+
   return (
     <div className="caged-view">
-      <div className="caged-top">
-        <h2 className="caged-title">CAGED Explorer</h2>
-        <p className="caged-subtitle">
-          {chordLabel(chord)} — fretboard positions, arpeggios & scales
-        </p>
+      <div className="caged-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        <div>
+          <h2 className="caged-title">CAGED Explorer</h2>
+          <p className="caged-subtitle">
+            Fretboard positions, arpeggios &amp; scales for your progression
+          </p>
+        </div>
+        {!isPopoutWindow() && (
+          <button className="btn-ghost btn-sm" onClick={popOut}>⧉ Pop out</button>
+        )}
       </div>
 
       {/* Chord progression */}
@@ -215,7 +237,7 @@ export default function CAGEDView() {
             <div key={i} className="caged-chord-wrap">
               <button
                 className={`caged-chord-btn${i === activeIdx ? ' active' : ''}`}
-                onClick={() => setActiveIdx(i)}
+                onClick={() => focusChord(i)}
               >
                 {chordLabel(ch)}
               </button>
@@ -284,15 +306,22 @@ export default function CAGEDView() {
         </div>
       </div>
 
-      {/* Fretboard */}
-      <div className="caged-neck-wrap">
-        <svg
-          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-          className="caged-neck-svg"
-          aria-label="Guitar fretboard diagram"
-        >
-          <FretBoard notes={notes} anchors={anchors} activeShape={activeShape} maxFret={MAX_FRET} />
-        </svg>
+      {/* Fretboards — one per progression chord, stacked */}
+      <div className="caged-neck-list">
+        {necks.map((n, i) => (
+          <div key={i} ref={el => { neckRefs.current[i] = el }}>
+            <div className="caged-neck-label">{chordLabel(n.chord)}</div>
+            <div className="caged-neck-wrap">
+              <svg
+                viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+                className="caged-neck-svg"
+                aria-label={`Guitar fretboard diagram for ${chordLabel(n.chord)}`}
+              >
+                <FretBoard notes={n.notes} anchors={n.anchors} activeShape={activeShape} maxFret={MAX_FRET} />
+              </svg>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Legend */}
