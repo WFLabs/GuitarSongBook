@@ -6,6 +6,11 @@ venv/
 
 # Database (your library — not committed)
 backend/songs.db
+backend/songs_old.db
+
+# Syncthing
+backend/.stfolder/
+backend/.stignore
 
 # Media (your audio files — not committed)
 media/*
